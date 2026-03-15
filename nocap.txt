@@ -1,0 +1,134 @@
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+-- GUI
+local gui = Instance.new("ScreenGui", player.PlayerGui)
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,200,0,150)
+frame.Position = UDim2.new(0.5,-100,0.5,-75)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.Active = true
+frame.Draggable = true
+frame.Visible = false
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "Mod Menu"
+title.BackgroundColor3 = Color3.fromRGB(50,50,50)
+title.TextColor3 = Color3.new(1,1,1)
+
+local aimBtn = Instance.new("TextButton", frame)
+aimBtn.Size = UDim2.new(1,0,0,40)
+aimBtn.Position = UDim2.new(0,0,0,35)
+aimBtn.Text = "Aim Line : OFF"
+
+local espBtn = Instance.new("TextButton", frame)
+espBtn.Size = UDim2.new(1,0,0,40)
+espBtn.Position = UDim2.new(0,0,0,80)
+espBtn.Text = "ESP : OFF"
+
+-- Toggle
+local aimEnabled = false
+local espEnabled = false
+
+aimBtn.MouseButton1Click:Connect(function()
+aimEnabled = not aimEnabled
+aimBtn.Text = "Aim Line : "..(aimEnabled and "ON" or "OFF")
+end)
+
+espBtn.MouseButton1Click:Connect(function()
+espEnabled = not espEnabled
+espBtn.Text = "ESP : "..(espEnabled and "ON" or "OFF")
+end)
+
+-- 3 finger touch toggle menu
+UIS.TouchStarted:Connect(function()
+if #UIS:GetTouches() == 3 then
+frame.Visible = not frame.Visible
+end
+end)
+
+-- Drawing
+local line = Drawing.new("Line")
+line.Color = Color3.new(1,0,0)
+line.Thickness = 2
+
+local boxes = {}
+
+-- Get closest player
+local function getClosest()
+local closest
+local dist = math.huge
+
+for _,v in pairs(Players:GetPlayers()) do
+if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+
+local pos,visible = camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+
+if visible then
+local d = (Vector2.new(pos.X,pos.Y) - Vector2.new(camera.ViewportSize.X/2,camera.ViewportSize.Y/2)).Magnitude
+
+if d < dist then
+dist = d
+closest = v
+end
+end
+end
+end
+
+return closest
+end
+
+-- Render loop
+RunService.RenderStepped:Connect(function()
+
+-- AIM LINE
+if aimEnabled then
+local target = getClosest()
+
+if target and target.Character then
+local pos,vis = camera:WorldToViewportPoint(target.Character.HumanoidRootPart.Position)
+
+if vis then
+line.Visible = true
+line.From = Vector2.new(camera.ViewportSize.X/2,camera.ViewportSize.Y/2)
+line.To = Vector2.new(pos.X,pos.Y)
+else
+line.Visible = false
+end
+end
+else
+line.Visible = false
+end
+
+-- ESP BOX
+for _,v in pairs(Players:GetPlayers()) do
+if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+
+if not boxes[v] then
+boxes[v] = Drawing.new("Square")
+boxes[v].Color = Color3.new(0,1,0)
+boxes[v].Thickness = 2
+boxes[v].Filled = false
+end
+
+local pos,vis = camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+
+if espEnabled and vis then
+boxes[v].Visible = true
+boxes[v].Size = Vector2.new(40,60)
+boxes[v].Position = Vector2.new(pos.X-20,pos.Y-30)
+else
+boxes[v].Visible = false
+end
+
+end
+end
+
+end)
